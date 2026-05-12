@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NEET PG 2026 - Master Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Inter:wght@400;600;800;900&display=swap');
+
+        :root { --dynamic-color: #00ffcc; }
+
+        body, html {
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            font-family: 'Inter', sans-serif;
+            background: transparent;
+            overflow: hidden;
+            color: white;
+        }
+
+        #glass-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            z-index: -1;
+        }
+
+        #clock-module {
+            position: absolute; top: 20px; left: 20px;
+            display: flex; align-items: center; gap: 15px;
+            background: rgba(0,0,0,0.6); padding: 10px 20px;
+            border-radius: 50px 15px 15px 50px;
+            border: 2px solid var(--dynamic-color);
+        }
+        #analog-clock { width: 50px; height: 50px; border: 2px solid white; border-radius: 50%; position: relative; }
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background: white; transform: translateX(-50%); }
+        .hour { height: 12px; width: 3px; }
+        .min { height: 18px; width: 2px; }
+        .sec { height: 20px; width: 1px; background: var(--dynamic-color); }
+        #digital-clock { font-family: 'Orbitron'; font-size: 1.1rem; }
+
+        #day-banner {
+            position: absolute; top: 20px; right: 20px;
+            width: 160px; background: white; border-radius: 12px;
+            text-align: center; border: 4px solid var(--dynamic-color);
+        }
+        #banner-head { background: var(--dynamic-color); font-size: 0.7rem; font-weight: 900; padding: 6px; color: black; }
+        #banner-days { color: #000; font-family: 'Orbitron'; font-size: 2.5rem; padding: 5px 0; }
+        .neet-text { color: #888; font-size: 0.75rem; font-weight: 900; padding-bottom: 10px; }
+
+        .widget {
+            position: absolute; background: rgba(0, 0, 0, 0.65);
+            padding: 20px; border-radius: 15px;
+            backdrop-filter: blur(15px); width: 340px;
+            border-bottom: 4px solid var(--dynamic-color);
+            transition: opacity 0.5s ease;
+        }
+        #bottom-left { left: 20px; bottom: 20px; }
+        #bottom-right { right: 20px; bottom: 20px; }
+
+        .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--dynamic-color); margin-bottom: 12px; font-weight: 800; }
+        .item-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.9rem; }
+        .complete { color: #2ecc71; text-decoration: line-through; opacity: 0.5; }
+        #progress-fill { height: 6px; width: 0%; background: var(--dynamic-color); transition: 1s linear; border-radius: 3px; }
+
+        /* BRB / Break Screen */
+        #brb-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 1000; display: none;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        #doom-pic { width: 450px; height: 450px; border-radius: 25px; border: 5px solid var(--dynamic-color); object-fit: cover; margin-bottom: 30px; }
+        #doom-msg { font-family: 'Orbitron'; font-size: 1.4rem; color: white; max-width: 80%; margin-bottom: 20px; }
+        #next-time { font-family:'Orbitron'; font-size: 3.5rem; color: var(--dynamic-color); }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="glass-layer"></div>
+
+    <div id="clock-module">
+        <div id="analog-clock">
+            <div id="h-hand" class="hand hour"></div>
+            <div id="m-hand" class="hand min"></div>
+            <div id="s-hand" class="hand sec"></div>
+        </div>
+        <div id="digital-clock">00:00:00</div>
+    </div>
+
+    <div id="day-banner">
+        <div id="banner-head">COUNTDOWN ACTIVE</div>
+        <div id="banner-days">--</div>
+        <div class="neet-text">DAYS TO NEET PG</div>
+    </div>
+
+    <div id="bottom-left" class="widget">
+        <div class="label">Target Tracker</div>
+        <div id="target-list"></div>
+    </div>
+
+    <div id="bottom-right" class="widget">
+        <div class="label">Current Session</div>
+        <div id="active-name" style="font-size: 1.3rem; font-weight: 900;">Break</div>
+        <div style="width:100%; background:rgba(255,255,255,0.1); height:6px; margin: 12px 0; border-radius:3px;">
+            <div id="progress-fill"></div>
+        </div>
+        <div class="label" style="margin-top: 20px;">Day Schedule</div>
+        <div id="schedule-list"></div>
+    </div>
+
+    <div id="brb-screen">
+        <img id="doom-pic" src="" alt="Motivation">
+        <div id="doom-msg"></div>
+        <div style="background: rgba(255,255,255,0.05); padding: 20px 40px; border-radius: 15px; border: 1px solid var(--dynamic-color);">
+            <div style="color: #888; font-size: 0.8rem; letter-spacing: 3px;">NEXT SESSION STARTS IN</div>
+            <div id="next-time">00:00</div>
+        </div>
+    </div>
+
+    <script>
+        const EXAM_DATE = new Date("2026-08-30T00:00:00");
+        const SHEET_ID = "1q5H4GwTK4NTXD7KdUpNBlhhtrMUVJroW3b30AslL4HM";
+        const SHEET_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+        
+        const doomVault = [
+            {id: "1Wwn3CigkQlrxcCozt2-99gT3HtqpbQ8p", msg: "Victory belongs to the most persevering."},
+            {id: "1jsNtnjzG5rLtwKcDQ72STE2EF0gBhb_B", msg: "Do not let the fatigue of today dim your focus."},
+            {id: "1pCBbPsox531__avBMNPQiUmxlMJtrXyl", msg: "Doom demands your absolute best. Prepare yourself."},
+            {id: "1tf9YJj7oeDEo0lOJQ_bUOA9WPF15zDRh", msg: "Your rank is being forged in these silent hours."},
+            {id: "16y9Os0BjRYQPDhk0tB0SBABoQAMeBaNl", msg: "Silence your doubts. Discipline is the only way."},
+            {id: "17ryUra9D-w03CvupVb-lWZRDFyrsV26I", msg: "Even kings must strategize. Recover and return."},
+            {id: "1XS90blUwItkhJ67IdWDnz2xGbA8dlwbp", msg: "Every minute of rest is a minute for your rival."},
+            {id: "1S6R9juoJYobOLdsFfW-sMJZCYPPJewEU", msg: "The throne of medicine awaits the disciplined."},
+            {id: "1y0YxO2TF5yUWQlrsZkLI0BKu4Ydo2YKa", msg: "Do not falter. The conquest is almost complete."},
+            {id: "15_heWSqmhO0VPYEcI6I2nhoxDG9hFADi", msg: "Focus is the ultimate weapon of a Doctor."},
+            {id: "1FwPYEATR6_PkeXya_YdT4FoaLT840fLG", msg: "Rest is not defeat. It is ammunition for the next task."},
+            {id: "1TJEXp7g3GpidUipaCYoW99aLp9eMhW0E", msg: "Face the exam with the heart of a Conqueror."}
+        ];
+
+        let allData = [];
+
+        function updateIST() {
+            const ist = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+            document.getElementById('h-hand').style.transform = `translateX(-50%) rotate(${(ist.getHours() * 30) + (ist.getMinutes() / 2)}deg)`;
+            document.getElementById('m-hand').style.transform = `translateX(-50%) rotate(${ist.getMinutes() * 6}deg)`;
+            document.getElementById('s-hand').style.transform = `translateX(-50%) rotate(${ist.getSeconds() * 6}deg)`;
+            document.getElementById('digital-clock').innerText = ist.toLocaleTimeString('en-GB');
+        }
+
+        async function sync() {
+            try {
+                const response = await fetch(`${SHEET_CSV}&cachebuster=${Date.now()}`);
+                const text = await response.text();
+                allData = text.split('\n').map(row => row.split(',').map(cell => cell.replace(/"/g, "").trim()));
+                renderData();
+            } catch (e) { console.error("Sync Error"); }
+        }
+
+        function renderData() {
+            const ist = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+            const curH = ist.getHours().toString().padStart(2, '0');
+            const curM = ist.getMinutes().toString().padStart(2, '0');
+            const timeStr = `${curH}:${curM}`;
+            
+            // Targets
+            const tList = document.getElementById('target-list');
+            tList.innerHTML = "";
+            allData.filter(r => r[0] === "Target").forEach(r => {
+                const done = r[2] && r[2].toLowerCase() === "complete";
+                tList.innerHTML += `<div class="item-row ${done ? 'complete' : ''}"><span>${r[1]}</span><span>${done ? '✓' : '●'}</span></div>`;
+            });
+
+            // Sessions logic
+            const sessions = allData.filter(r => r[0] === "Session");
+            let active = null, next = null;
+            const sList = document.getElementById('schedule-list'); 
+            sList.innerHTML = "";
+
+            sessions.forEach(s => {
+                const [start, end] = s[2].split('-');
+                if (timeStr >= start && timeStr < end) {
+                    active = { name: s[1], start, end };
+                } else if (start > timeStr && !next) {
+                    next = { name: s[1], start };
+                }
+                sList.innerHTML += `<div class="item-row" style="opacity:${timeStr > end ? '0.3' : '1'}"><span>${s[1]}</span><span>${s[2]}</span></div>`;
+            });
+
+            const brb = document.getElementById('brb-screen');
+            const widgets = document.querySelectorAll('.widget');
+
+            if (!active) {
+                // NO ACTIVE SESSION: Show Break Overlay
+                if (brb.style.display !== 'flex') {
+                    const pick = doomVault[Math.floor(Math.random() * doomVault.length)];
+                    document.getElementById('doom-pic').src = `https://lh3.googleusercontent.com/u/0/d/${pick.id}`;
+                    document.getElementById('doom-msg').innerText = pick.msg;
+                    brb.style.display = 'flex';
+                    // Hide widgets so sheets don't reflect
+                    widgets.forEach(w => w.classList.add('hidden'));
+                }
+                
+                if (next) {
+                    const [nh, nm] = next.start.split(':');
+                    const nt = new Date(ist); nt.setHours(nh, nm, 0);
+                    let diff = nt - ist;
+                    let mins = Math.floor(diff/60000);
+                    let secs = Math.floor((diff%60000)/1000);
+                    document.getElementById('next-time').innerText = mins + ":" + secs.toString().padStart(2,'0');
+                } else { 
+                    document.getElementById('next-time').innerText = "DONE"; 
+                }
+            } else {
+                // SESSION ACTIVE: Hide Break Overlay, Show Widgets
+                brb.style.display = 'none';
+                widgets.forEach(w => w.classList.remove('hidden'));
+                
+                document.getElementById('active-name').innerText = active.name;
+                const [sh, sm] = active.start.split(':'), [eh, em] = active.end.split(':');
+                const st = new Date(ist); st.setHours(sh, sm, 0); 
+                const et = new Date(ist); et.setHours(eh, em, 0);
+                document.getElementById('progress-fill').style.width = Math.min(100, ((ist - st) / (et - st) * 100)) + "%";
+            }
+
+            const daysLeft = Math.max(0, Math.floor((EXAM_DATE - ist) / 86400000));
+            document.getElementById('banner-days').innerText = daysLeft;
+        }
+
+        setInterval(updateIST, 1000);
+        setInterval(renderData, 1000); 
+        setInterval(sync, 15000); 
+        
+        updateIST(); sync();
+    </script>
+</body>
+</
